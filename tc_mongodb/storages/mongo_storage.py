@@ -5,7 +5,10 @@
 # Copyright (c) 2011 globo.com timehome@corp.globo.com
 
 from datetime import datetime, timedelta
-from cStringIO import StringIO
+try:
+    from cStringIO import StringIO
+except ImportError:
+    from io import StringIO
 
 from pymongo import MongoClient
 import gridfs
