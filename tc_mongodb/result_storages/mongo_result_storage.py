@@ -105,7 +105,7 @@ class Storage(BaseStorage):
         key = self.get_key_from_request
         stored = next(self.storage.find({
             'key': key,
-            'created_at': {'$gte': datetime.utcnow() - self.get_max_age},
+            'created_at': {'$gte': datetime.utcnow() - self.get_max_age()},
         }, {
             'file_id': True,
         }).limit(1), None)
@@ -125,14 +125,14 @@ class Storage(BaseStorage):
         '''
 
         key = self.get_key_from_request
-        max_age = self.get_max_age
+        max_age = self.get_max_age()
 
         if max_age == 0:
             return datetime.fromtimestamp(Storage.start_time)
 
         image = next(self.storage.find({
             'key': key,
-            'created_at': {'$gte': datetime.utcnow() - self.get_max_age},
+            'created_at': {'$gte': datetime.utcnow() - self.get_max_age()},
         }, {
             'created_at': True, '_id': False
         }).limit(1), None)
