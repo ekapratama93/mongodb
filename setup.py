@@ -20,11 +20,11 @@ setup(
     license="MIT",
     keywords="thumbor mongodb mongo",
     url="https://github.com/thumbor-community/mongodb",
-    packages=[
+    packages=find_packages(include=[
         'tc_mongodb',
         'tc_mongodb.storages',
         'tc_mongodb.result_storages'
-    ],
+    ]),
     long_description=long_description,
     classifiers=[
         'Development Status :: 5 - Production/Stable',
