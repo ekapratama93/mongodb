@@ -118,7 +118,7 @@ class Storage(BaseStorage):
         callback(storage.find({
             'path': path,
             'created_at': {'$gte': datetime.datetime.utcnow() - datetime.timedelta(seconds=self.context.config.STORAGE_EXPIRATION_SECONDS)},
-        }).limit(1).count() > 1)
+        }).limit(1).count() >= 1)
 
     def remove(self, path):
         if not self.exists(path):
