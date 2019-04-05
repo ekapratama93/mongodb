@@ -60,3 +60,6 @@ target/
 venv
 .env
 .venv
+
+# Editor stuff
+.vscode
