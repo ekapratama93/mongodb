@@ -35,7 +35,9 @@ class Storage(BaseStorage):
             self.context.config.MONGO_RESULT_STORAGE_SERVER_PORT
         )
 
-        database = connection[self.context.config.MONGO_RESULT_STORAGE_SERVER_DB]
+        database = connection[
+            self.context.config.MONGO_RESULT_STORAGE_SERVER_DB
+        ]
         storage = database[
             self.context.config.MONGO_RESULT_STORAGE_SERVER_COLLECTION
         ]
