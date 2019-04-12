@@ -13,11 +13,6 @@ from thumbor.result_storages import BaseStorage
 from thumbor.utils import logger
 from tc_mongodb.utils import OnException
 
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 
 class Storage(BaseStorage):
 
@@ -121,7 +116,7 @@ class Storage(BaseStorage):
         file_doc = dict(doc)
 
         fs = gridfs.GridFS(self.database)
-        file_data = fs.put(StringIO(bytes), **doc)
+        file_data = fs.put(bytes, **doc)
 
         file_doc['file_id'] = file_data
         self.database.storage.insert(file_doc)
@@ -146,7 +141,7 @@ class Storage(BaseStorage):
         fs = gridfs.GridFS(self.database)
 
         contents = fs.get(stored['file_id']).read()
-        return str(contents)
+        return contents
 
     @OnException(on_mongodb_error, PyMongoError)
     def last_updated(self):

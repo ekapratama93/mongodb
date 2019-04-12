@@ -5,12 +5,6 @@
 # Copyright (c) 2011 globo.com timehome@corp.globo.com
 
 from datetime import datetime, timedelta
-
-try:
-    from cStringIO import StringIO
-except ImportError:
-    from io import StringIO
-
 import gridfs
 from pymongo import MongoClient
 from pymongo.errors import PyMongoError
@@ -88,7 +82,7 @@ class Storage(BaseStorage):
             doc_with_crypto['crypto'] = self.context.server.security_key
 
         fs = gridfs.GridFS(self.database)
-        file_data = fs.put(StringIO(bytes), **doc)
+        file_data = fs.put(bytes, **doc)
 
         doc_with_crypto['file_id'] = file_data
         self.storage.insert_one(doc_with_crypto)
@@ -156,7 +150,7 @@ class Storage(BaseStorage):
         fs = gridfs.GridFS(self.database)
 
         contents = fs.get(stored['file_id']).read()
-        return str(contents)
+        return contents
 
     @return_future
     def exists(self, path, callback):
