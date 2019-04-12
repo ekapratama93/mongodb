@@ -23,6 +23,11 @@ from tc_mongodb.utils import OnException
 class Storage(BaseStorage):
 
     def __init__(self, context):
+        '''Initialize the MongoStorage
+
+        :param thumbor.context.Context shared_client: Current context
+        '''
+        BaseStorage.__init__(self, context)
         self.database, self.storage = self.__conn__()
 
     def __conn__(self):
@@ -59,11 +64,7 @@ class Storage(BaseStorage):
         :rtype: int
         '''
 
-        default_ttl = self.context.config.STORAGE_EXPIRATION_SECONDS
-        if self.context.request.max_age == 0:
-            return self.context.request.max_age
-
-        return default_ttl
+        return self.context.config.STORAGE_EXPIRATION_SECONDS
 
     @OnException(on_mongodb_error, PyMongoError)
     def put(self, path, bytes):
