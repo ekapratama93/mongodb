@@ -31,6 +31,7 @@ class MongoStorageVows(MongoDBContext):
     class CanStoreImage(Vows.Context):
         def topic(self):
             config = Config(
+                MONGO_STORAGE_URI="",
                 MONGO_STORAGE_SERVER_HOST='localhost',
                 MONGO_STORAGE_SERVER_PORT=27017,
                 MONGO_STORAGE_SERVER_DB='thumbor',
@@ -50,6 +51,7 @@ class MongoStorageVows(MongoDBContext):
         class KnowsImageDoesNotExist(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -68,6 +70,7 @@ class MongoStorageVows(MongoDBContext):
     class CanRemoveImage(Vows.Context):
         def topic(self):
             config = Config(
+                MONGO_STORAGE_URI="",
                 MONGO_STORAGE_SERVER_HOST='localhost',
                 MONGO_STORAGE_SERVER_PORT=27017,
                 MONGO_STORAGE_SERVER_DB='thumbor',
@@ -88,6 +91,7 @@ class MongoStorageVows(MongoDBContext):
         class CanReRemoveImage(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -106,6 +110,7 @@ class MongoStorageVows(MongoDBContext):
     class CanGetImage(Vows.Context):
         def topic(self):
             config = Config(
+                MONGO_STORAGE_URI="",
                 MONGO_STORAGE_SERVER_HOST='localhost',
                 MONGO_STORAGE_SERVER_PORT=27017,
                 MONGO_STORAGE_SERVER_DB='thumbor',
@@ -131,6 +136,7 @@ class MongoStorageVows(MongoDBContext):
             @Vows.capture_error
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27018,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -152,6 +158,7 @@ class MongoStorageVows(MongoDBContext):
         class IgnoreErrors(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27018,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -180,6 +187,7 @@ class MongoStorageVows(MongoDBContext):
             @Vows.capture_error
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -203,6 +211,7 @@ class MongoStorageVows(MongoDBContext):
         class GettingCryptoForANewImageReturnsNone(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -221,6 +230,7 @@ class MongoStorageVows(MongoDBContext):
         class DoesNotStoreIfConfigSaysNotTo(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -240,6 +250,7 @@ class MongoStorageVows(MongoDBContext):
         class CanStoreCrypto(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -265,6 +276,7 @@ class MongoStorageVows(MongoDBContext):
         class CanStoreDetectorData(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',
@@ -288,6 +300,7 @@ class MongoStorageVows(MongoDBContext):
         class ReturnsNoneIfNoDetectorData(Vows.Context):
             def topic(self):
                 config = Config(
+                    MONGO_STORAGE_URI="",
                     MONGO_STORAGE_SERVER_HOST='localhost',
                     MONGO_STORAGE_SERVER_PORT=27017,
                     MONGO_STORAGE_SERVER_DB='thumbor',

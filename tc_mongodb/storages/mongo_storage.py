@@ -35,10 +35,13 @@ class Storage(BaseStorage):
         :returns: MongoDB DB and Collection
         :rtype: pymongo.database.Database, pymongo.database.Collection
         '''
-        connection = MongoClient(
-            self.context.config.MONGO_STORAGE_SERVER_HOST,
-            self.context.config.MONGO_STORAGE_SERVER_PORT
-        )
+        if self.context.config.MONGO_STORAGE_URI:
+            connection = MongoClient(self.context.config.MONGO_STORAGE_URI)
+        else:
+            connection = MongoClient(
+                self.context.config.MONGO_STORAGE_SERVER_HOST,
+                self.context.config.MONGO_STORAGE_SERVER_PORT
+            )
 
         database = connection[self.context.config.MONGO_STORAGE_SERVER_DB]
         storage = database[self.context.config.MONGO_STORAGE_SERVER_COLLECTION]
@@ -88,7 +91,7 @@ class Storage(BaseStorage):
         file_data = fs.put(StringIO(bytes), **doc)
 
         doc_with_crypto['file_id'] = file_data
-        self.storage.insert(doc_with_crypto)
+        self.storage.insert_one(doc_with_crypto)
 
     @OnException(on_mongodb_error, PyMongoError)
     def put_crypto(self, path):

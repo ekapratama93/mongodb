@@ -33,10 +33,20 @@ class Storage(BaseStorage):
             Storage.start_time = time.time()
 
     def __conn__(self):
-        connection = MongoClient(
-            self.context.config.MONGO_RESULT_STORAGE_SERVER_HOST,
-            self.context.config.MONGO_RESULT_STORAGE_SERVER_PORT
-        )
+        '''Return the MongoDB database and collection object.
+        :returns: MongoDB DB and Collection
+        :rtype: pymongo.database.Database, pymongo.database.Collection
+        '''
+
+        if self.context.config.MONGO_RESULT_STORAGE_URI:
+            connection = MongoClient(
+                self.context.config.MONGO_RESULT_STORAGE_URI
+            )
+        else:
+            connection = MongoClient(
+                self.context.config.MONGO_RESULT_STORAGE_SERVER_HOST,
+                self.context.config.MONGO_RESULT_STORAGE_SERVER_PORT
+            )
 
         database = connection[
             self.context.config.MONGO_RESULT_STORAGE_SERVER_DB
