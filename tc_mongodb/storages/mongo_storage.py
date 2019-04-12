@@ -5,6 +5,7 @@
 # Copyright (c) 2011 globo.com timehome@corp.globo.com
 
 from datetime import datetime, timedelta
+
 try:
     from cStringIO import StringIO
 except ImportError:
@@ -12,9 +13,11 @@ except ImportError:
 
 import gridfs
 from pymongo import MongoClient
-
-from thumbor.storages import BaseStorage
+from pymongo.errors import PyMongoError
 from tornado.concurrent import return_future
+from thumbor.storages import BaseStorage
+from thumbor.utils import logger
+from tc_mongodb.utils import OnException
 
 
 class Storage(BaseStorage):
@@ -37,6 +40,19 @@ class Storage(BaseStorage):
 
         return database, storage
 
+    def on_mongodb_error(self, fname, exc_type, exc_value):
+        '''Callback executed when there is a redis error.
+        :param string fname: Function name that was being called.
+        :param type exc_type: Exception type
+        :param Exception exc_value: The current exception
+        :returns: Default value or raise the current exception
+        '''
+
+        logger.error("[MONGODB_STORAGE] %s" % exc_value)
+        if fname == '_exists':
+            return False
+        return None
+
     def get_max_age(self):
         '''Return the TTL of the current request.
         :returns: The TTL value for the current request.
@@ -49,6 +65,7 @@ class Storage(BaseStorage):
 
         return default_ttl
 
+    @OnException(on_mongodb_error, PyMongoError)
     def put(self, path, bytes):
         doc = {
             'path': path,
@@ -70,6 +87,7 @@ class Storage(BaseStorage):
         self.storage.insert(doc_with_crypto)
         return path
 
+    @OnException(on_mongodb_error, PyMongoError)
     def put_crypto(self, path):
         if not self.context.config.STORES_CRYPTO_KEY_FOR_EACH_IMAGE:
             return None
@@ -84,17 +102,26 @@ class Storage(BaseStorage):
 
         return path
 
+    @OnException(on_mongodb_error, PyMongoError)
     def put_detector_data(self, path, data):
         self.storage.update({'path': path}, {"$set": {"detector_data": data}})
         return path
 
     @return_future
     def get_crypto(self, path, callback):
+        callback(self._get_crypto(path))
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def _get_crypto(self, path):
         crypto = self.storage.find_one({'path': path})
-        callback(crypto.get('crypto') if crypto else None)
+        return crypto.get('crypto') if crypto else None
 
     @return_future
     def get_detector_data(self, path, callback):
+        callback(self._get_detector_data(path))
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def _get_detector_data(self, path):
         doc = next(self.storage.find({
             'path': path,
             'detector_data': {'$ne': None},
@@ -102,44 +129,47 @@ class Storage(BaseStorage):
             'detector_data': True,
         }).limit(1), None)
 
-        callback(doc.get('detector_data') if doc else None)
+        return doc.get('detector_data') if doc else None
 
     @return_future
     def get(self, path, callback):
-        stored = next(self.storage.find({
-            'path': path,
-            'created_at': {
-                '$gte':
-                    datetime.utcnow() - timedelta(seconds=self.get_max_age())
-            },
-        }, {
-            'file_id': True,
-        }).limit(1), None)
+        callback(self._get(path))
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def _get(self, path):
+        now = datetime.utcnow()
+        stored = next(
+            self.storage.find({
+                'path': path,
+                'created_at': {
+                    '$gte': now - timedelta(seconds=self.get_max_age())},
+            }, {'file_id': True}).limit(1), None
+        )
 
         if not stored:
-            callback(None)
-            return
+            return None
 
         fs = gridfs.GridFS(self.database)
 
         contents = fs.get(stored['file_id']).read()
-
-        callback(str(contents))
+        return str(contents)
 
     @return_future
     def exists(self, path, callback):
-        callback(self.storage.find({
+        callback(self._exists(path))
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def _exists(self, path):
+        return self.storage.find({
             'path': path,
             'created_at': {
                 '$gte':
                     datetime.utcnow() - timedelta(seconds=self.get_max_age())
             },
-        }).limit(1).count() >= 1)
+        }).limit(1).count() >= 1
 
+    @OnException(on_mongodb_error, PyMongoError)
     def remove(self, path):
-        if not self.exists(path):
-            return
-
         self.storage.remove({'path': path})
 
         fs = gridfs.GridFS(self.database)

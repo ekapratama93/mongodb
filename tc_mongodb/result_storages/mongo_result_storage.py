@@ -8,7 +8,10 @@ from datetime import datetime, timedelta
 
 import gridfs
 from pymongo import MongoClient
+from pymongo.errors import PyMongoError
 from thumbor.result_storages import BaseStorage
+from thumbor.utils import logger
+from tc_mongodb.utils import OnException
 
 try:
     from cStringIO import StringIO
@@ -43,6 +46,19 @@ class Storage(BaseStorage):
         ]
 
         return database, storage
+
+    def on_mongodb_error(self, fname, exc_type, exc_value):
+        '''Callback executed when there is a redis error.
+        :param string fname: Function name that was being called.
+        :param type exc_type: Exception type
+        :param Exception exc_value: The current exception
+        :returns: Default value or raise the current exception
+        '''
+
+        logger.error("[MONGODB_STORAGE] %s" % exc_value)
+        if fname == '_exists':
+            return False
+        return None
 
     def is_auto_webp(self):
         '''
@@ -80,6 +96,7 @@ class Storage(BaseStorage):
 
         return default_ttl
 
+    @OnException(on_mongodb_error, PyMongoError)
     def put(self, bytes):
         '''Save to mongodb
         :param bytes: Bytes to write to the storage.
@@ -101,6 +118,7 @@ class Storage(BaseStorage):
 
         return self.get_key_from_request
 
+    @OnException(on_mongodb_error, PyMongoError)
     def get(self):
         '''Get the item from MongoDB.'''
 
@@ -120,6 +138,7 @@ class Storage(BaseStorage):
         contents = fs.get(stored['file_id']).read()
         return str(contents)
 
+    @OnException(on_mongodb_error, PyMongoError)
     def last_updated(self):
         '''Return the last_updated time of the current request item
         :return: A DateTime object
