@@ -53,10 +53,13 @@ class Storage(BaseStorage):
         :returns: Default value or raise the current exception
         '''
 
-        logger.error("[MONGODB_STORAGE] %s" % exc_value)
-        if fname == '_exists':
-            return False
-        return None
+        if self.context.config.MONGODB_STORAGE_IGNORE_ERRORS:
+            logger.error("[MONGODB_STORAGE] %s" % exc_value)
+            if fname == '_exists':
+                return False
+            return None
+        else:
+            raise exc_value
 
     def get_max_age(self):
         '''Return the TTL of the current request.
@@ -86,7 +89,6 @@ class Storage(BaseStorage):
 
         doc_with_crypto['file_id'] = file_data
         self.storage.insert(doc_with_crypto)
-        return path
 
     @OnException(on_mongodb_error, PyMongoError)
     def put_crypto(self, path):
@@ -98,15 +100,13 @@ class Storage(BaseStorage):
                 True if no SECURITY_KEY specified")
 
         self.storage.update_one(
-            {'path': path}, {'crypto': self.context.server.security_key}
+            {'path': path},
+            {'$set': {'crypto': self.context.server.security_key}}
         )
-
-        return path
 
     @OnException(on_mongodb_error, PyMongoError)
     def put_detector_data(self, path, data):
         self.storage.update({'path': path}, {"$set": {"detector_data": data}})
-        return path
 
     @return_future
     def get_crypto(self, path, callback):
@@ -171,8 +171,10 @@ class Storage(BaseStorage):
 
     @OnException(on_mongodb_error, PyMongoError)
     def remove(self, path):
-        self.storage.remove({'path': path})
+        self.storage.delete_many({'path': path})
 
         fs = gridfs.GridFS(self.database)
-        file_id = fs.find_one({'path': path})._id
-        fs.delete(file_id)
+        file_datas = fs.find({'path': path})
+        if file_datas:
+            for file_data in file_datas:
+                fs.delete(file_data._id)
