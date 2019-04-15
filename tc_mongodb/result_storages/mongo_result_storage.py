@@ -4,12 +4,14 @@
 # Copyright (c) 2015 Thumbor-Community
 
 import time
+import pytz
 from datetime import datetime, timedelta
 
 import gridfs
 from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.errors import PyMongoError
-from thumbor.result_storages import BaseStorage
+from thumbor.engines import BaseEngine
+from thumbor.result_storages import BaseStorage, ResultStorageResult
 from thumbor.utils import logger
 from tc_mongodb.utils import OnException
 
@@ -154,7 +156,16 @@ class Storage(BaseStorage):
         fs = gridfs.GridFS(self.database)
 
         contents = fs.get(stored['file_id']).read()
-        return contents
+
+        result = ResultStorageResult(
+            buffer=contents,
+            metadata={
+                'LastModified': stored['created_at'].replace(tzinfo=pytz.utc),
+                'ContentLength': len(contents),
+                'ContentType': BaseEngine.get_mimetype(contents)
+            }
+        )
+        return result
 
     @OnException(on_mongodb_error, PyMongoError)
     def last_updated(self):
