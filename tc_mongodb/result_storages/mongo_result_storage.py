@@ -7,7 +7,7 @@ import time
 from datetime import datetime, timedelta
 
 import gridfs
-from pymongo import MongoClient
+from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.errors import PyMongoError
 from thumbor.result_storages import BaseStorage
 from thumbor.utils import logger
@@ -23,6 +23,7 @@ class Storage(BaseStorage):
 
     def __init__(self, context):
         self.database, self.storage = self.__conn__()
+        self.ensure_index()
 
         if not Storage.start_time:
             Storage.start_time = time.time()
@@ -60,10 +61,21 @@ class Storage(BaseStorage):
         :returns: Default value or raise the current exception
         '''
 
-        logger.error("[MONGODB_STORAGE] %s" % exc_value)
+        logger.error("[MONGODB_RESULT_STORAGE] %s" % exc_value)
         if fname == '_exists':
             return False
         return None
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def ensure_index(self):
+        index_name = 'path_1_created_at_-1'
+        if index_name not in self.storage.index_information():
+            self.storage.create_index(
+                [('path', ASCENDING), ('created_at', DESCENDING)],
+                name=index_name
+            )
+        else:
+            logger.info("[MONGODB_RESULT_STORAGE] Index Already Exists")
 
     def is_auto_webp(self):
         '''

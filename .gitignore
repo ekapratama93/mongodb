@@ -63,3 +63,6 @@ venv
 
 # Editor stuff
 .vscode
+
+# OS stuff
+.DS_Store

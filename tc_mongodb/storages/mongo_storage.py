@@ -6,7 +6,7 @@
 
 from datetime import datetime, timedelta
 import gridfs
-from pymongo import MongoClient
+from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.errors import PyMongoError
 from tornado.concurrent import return_future
 from thumbor.storages import BaseStorage
@@ -23,6 +23,7 @@ class Storage(BaseStorage):
         '''
         BaseStorage.__init__(self, context)
         self.database, self.storage = self.__conn__()
+        self.ensure_index()
 
     def __conn__(self):
         '''Return the MongoDB database and collection object.
@@ -57,6 +58,17 @@ class Storage(BaseStorage):
             return None
         else:
             raise exc_value
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def ensure_index(self):
+        index_name = 'path_1_created_at_-1'
+        if index_name not in self.storage.index_information():
+            self.storage.create_index(
+                [('path', ASCENDING), ('created_at', DESCENDING)],
+                name=index_name
+            )
+        else:
+            logger.info("[MONGODB_STORAGE] Index Already Exists")
 
     def get_max_age(self):
         '''Return the TTL of the current request.
