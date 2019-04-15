@@ -68,10 +68,10 @@ class Storage(BaseStorage):
 
     @OnException(on_mongodb_error, PyMongoError)
     def ensure_index(self):
-        index_name = 'path_1_created_at_-1'
+        index_name = 'key_1_created_at_-1'
         if index_name not in self.storage.index_information():
             self.storage.create_index(
-                [('path', ASCENDING), ('created_at', DESCENDING)],
+                [('key', ASCENDING), ('created_at', DESCENDING)],
                 name=index_name
             )
         else:
@@ -145,6 +145,7 @@ class Storage(BaseStorage):
             'created_at': {'$gte': datetime.utcnow() - self.get_max_age()},
         }, {
             'file_id': True,
+            'created_at': True
         }).limit(1), None)
 
         if not stored:
