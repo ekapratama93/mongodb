@@ -24,6 +24,7 @@ class Storage(BaseStorage):
     start_time = None
 
     def __init__(self, context):
+        BaseStorage.__init__(self, context)
         self.database, self.storage = self.__conn__()
         self.ensure_index()
 
@@ -110,10 +111,41 @@ class Storage(BaseStorage):
         '''
 
         default_ttl = self.context.config.RESULT_STORAGE_EXPIRATION_SECONDS
-        if self.context.request.max_age == 0:
-            return self.context.request.max_age
 
         return default_ttl
+
+    def is_expired(self, key):
+        """
+        Tells whether key has expired
+        :param string key: Path to check
+        :return: Whether it is expired or not
+        :rtype: bool
+        """
+        if key:
+            expire = self.get_max_age
+
+            if expire is None or expire == 0:
+                return False
+
+            image = next(self.storage.find({
+                'key': key,
+                'created_at': {
+                    '$gte': datetime.utcnow() - timedelta(
+                        seconds=self.get_max_age()
+                    )
+                },
+            }, {
+                'created_at': True, '_id': False
+            }).limit(1), None)
+
+            if image:
+                age = int(
+                    (datetime.utcnow() - image['created_at']).total_seconds()
+                )
+                timediff = datetime.utcnow() - timedelta(seconds=age)
+                return timediff.seconds > expire
+        else:
+            return True
 
     @OnException(on_mongodb_error, PyMongoError)
     def put(self, bytes):
@@ -122,10 +154,16 @@ class Storage(BaseStorage):
         :return: MongoDB _id for the current url
         :rettype: string
         '''
+
         doc = {
-            'key': self.get_key_from_request,
-            'created_at': datetime.now()
+            'key': self.get_key_from_request(),
+            'created_at': datetime.utcnow()
         }
+
+        if self.context.config.get("MONGO_STORE_METADATA", False):
+            doc['metadata'] = dict(self.context.headers)
+        else:
+            doc['metadata'] = {}
 
         file_doc = dict(doc)
 
@@ -133,21 +171,24 @@ class Storage(BaseStorage):
         file_data = fs.put(bytes, **doc)
 
         file_doc['file_id'] = file_data
-        self.database.storage.insert(file_doc)
-
-        return self.get_key_from_request
+        self.storage.insert_one(file_doc)
 
     @OnException(on_mongodb_error, PyMongoError)
     def get(self):
         '''Get the item from MongoDB.'''
 
-        key = self.get_key_from_request
+        key = self.get_key_from_request()
         stored = next(self.storage.find({
             'key': key,
-            'created_at': {'$gte': datetime.utcnow() - self.get_max_age()},
+            'created_at': {
+                '$gte': datetime.utcnow() - timedelta(
+                    seconds=self.get_max_age()
+                )
+            },
         }, {
             'file_id': True,
-            'created_at': True
+            'created_at': True,
+            'metadata': True
         }).limit(1), None)
 
         if not stored:
@@ -157,13 +198,16 @@ class Storage(BaseStorage):
 
         contents = fs.get(stored['file_id']).read()
 
+        metadata = stored['metadata']
+        metadata['LastModified'] = stored['created_at'].replace(
+            tzinfo=pytz.utc
+        )
+        metadata['ContentLength'] = len(contents)
+        metadata['ContentType'] = BaseEngine.get_mimetype(contents)
         result = ResultStorageResult(
             buffer=contents,
-            metadata={
-                'LastModified': stored['created_at'].replace(tzinfo=pytz.utc),
-                'ContentLength': len(contents),
-                'ContentType': BaseEngine.get_mimetype(contents)
-            }
+            metadata=metadata,
+            successful=True
         )
         return result
 
@@ -174,7 +218,7 @@ class Storage(BaseStorage):
         :rettype: datetetime.datetime
         '''
 
-        key = self.get_key_from_request
+        key = self.get_key_from_request()
         max_age = self.get_max_age()
 
         if max_age == 0:
@@ -182,23 +226,30 @@ class Storage(BaseStorage):
 
         image = next(self.storage.find({
             'key': key,
-            'created_at': {'$gte': datetime.utcnow() - self.get_max_age()},
+            'created_at': {
+                '$gte': datetime.utcnow() - timedelta(
+                    seconds=self.get_max_age()
+                )
+            },
         }, {
             'created_at': True, '_id': False
         }).limit(1), None)
 
-        age = int((datetime.utcnow() - image['created_at']).total_seconds())
-        ttl = max_age - age
-
-        if max_age <= 0:
-            return datetime.fromtimestamp(Storage.start_time)
-
-        if ttl >= 0:
-            return datetime.utcnow() - timedelta(
-                seconds=(
-                    max_age - ttl
-                )
+        if image:
+            age = int(
+                (datetime.utcnow() - image['created_at']).total_seconds()
             )
+            ttl = max_age - age
+
+            if max_age <= 0:
+                return datetime.fromtimestamp(Storage.start_time)
+
+            if ttl >= 0:
+                return datetime.utcnow() - timedelta(
+                    seconds=(
+                        max_age - ttl
+                    )
+                )
 
         # Should never reach here. It means the storage put failed or the item
         # somehow does not exists anymore
