@@ -216,14 +216,18 @@ class Storage(BaseStorage):
         )
         return result
 
-    @OnException(on_mongodb_error, PyMongoError)
-    def last_updated(self):
+    @return_future
+    def last_updated(self, callback):
         '''Return the last_updated time of the current request item
         :return: A DateTime object
         :rettype: datetetime.datetime
         '''
 
         key = self.get_key_from_request()
+        callback(self._last_updated(key))
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def _last_updated(self, key):
         max_age = self.get_max_age()
 
         if max_age == 0:
