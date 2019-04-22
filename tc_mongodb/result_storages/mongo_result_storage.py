@@ -10,6 +10,7 @@ from datetime import datetime, timedelta
 import gridfs
 from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.errors import PyMongoError
+from tornado.concurrent import return_future
 from thumbor.engines import BaseEngine
 from thumbor.result_storages import BaseStorage, ResultStorageResult
 from thumbor.utils import logger
@@ -173,11 +174,15 @@ class Storage(BaseStorage):
         file_doc['file_id'] = file_data
         self.storage.insert_one(file_doc)
 
-    @OnException(on_mongodb_error, PyMongoError)
-    def get(self):
+    @return_future
+    def get(self, callback):
         '''Get the item from MongoDB.'''
 
         key = self.get_key_from_request()
+        callback(self._get(key))
+
+    @OnException(on_mongodb_error, PyMongoError)
+    def _get(self, key):
         stored = next(self.storage.find({
             'key': key,
             'created_at': {
