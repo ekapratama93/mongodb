@@ -4,8 +4,8 @@
 # Copyright (c) 2015 Thumbor-Community
 
 import time
-import pytz
 from datetime import datetime, timedelta
+import pytz
 
 import gridfs
 from pymongo import ASCENDING, DESCENDING, MongoClient
@@ -31,6 +31,7 @@ class Storage(BaseStorage):
 
         if not Storage.start_time:
             Storage.start_time = time.time()
+        super(Storage, self).__init__(context)
 
     def __conn__(self):
         '''Return the MongoDB database and collection object.
@@ -216,18 +217,14 @@ class Storage(BaseStorage):
         )
         return result
 
-    @return_future
-    def last_updated(self, callback):
+    @OnException(on_mongodb_error, PyMongoError)
+    def last_updated(self):
         '''Return the last_updated time of the current request item
         :return: A DateTime object
         :rettype: datetetime.datetime
         '''
 
         key = self.get_key_from_request()
-        callback(self._last_updated(key))
-
-    @OnException(on_mongodb_error, PyMongoError)
-    def _last_updated(self, key):
         max_age = self.get_max_age()
 
         if max_age == 0:

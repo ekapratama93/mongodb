@@ -24,6 +24,7 @@ class Storage(BaseStorage):
         BaseStorage.__init__(self, context)
         self.database, self.storage = self.__conn__()
         self.ensure_index()
+        super(Storage, self).__init__(context)
 
     def __conn__(self):
         '''Return the MongoDB database and collection object.
