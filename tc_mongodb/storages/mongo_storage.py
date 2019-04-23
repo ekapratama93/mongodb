@@ -11,7 +11,7 @@ from tornado.concurrent import return_future
 from thumbor.storages import BaseStorage
 from thumbor.utils import logger
 from tc_mongodb.utils import OnException
-from tc_mongodb.mongodb.connector import MongoConnector
+from tc_mongodb.mongodb.connector_storage import MongoConnector
 
 
 class Storage(BaseStorage):
@@ -37,8 +37,7 @@ class Storage(BaseStorage):
             port=self.context.config.MONGO_STORAGE_SERVER_PORT,
             db_name=self.context.config.MONGO_STORAGE_SERVER_DB,
             coll_name=
-            self.context.config.MONGO_STORAGE_SERVER_COLLECTION,
-            result=False
+            self.context.config.MONGO_STORAGE_SERVER_COLLECTION
         )
 
         database = mongo_conn.db_conn

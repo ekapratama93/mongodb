@@ -14,7 +14,7 @@ from thumbor.engines import BaseEngine
 from thumbor.result_storages import BaseStorage, ResultStorageResult
 from thumbor.utils import logger
 from tc_mongodb.utils import OnException
-from tc_mongodb.mongodb.connector import MongoConnector
+from tc_mongodb.mongodb.connector_result_storage import MongoConnector
 
 
 class Storage(BaseStorage):
@@ -44,8 +44,7 @@ class Storage(BaseStorage):
             port=self.context.config.MONGO_RESULT_STORAGE_SERVER_PORT,
             db_name=self.context.config.MONGO_RESULT_STORAGE_SERVER_DB,
             coll_name=
-            self.context.config.MONGO_RESULT_STORAGE_SERVER_COLLECTION,
-            result=True
+            self.context.config.MONGO_RESULT_STORAGE_SERVER_COLLECTION
         )
 
         database = mongo_conn.db_conn
