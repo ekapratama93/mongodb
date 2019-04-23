@@ -6,12 +6,12 @@
 
 from datetime import datetime, timedelta
 import gridfs
-from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.errors import PyMongoError
 from tornado.concurrent import return_future
 from thumbor.storages import BaseStorage
 from thumbor.utils import logger
 from tc_mongodb.utils import OnException
+from tc_mongodb.mongodb.connector import MongoConnector
 
 
 class Storage(BaseStorage):
@@ -23,7 +23,6 @@ class Storage(BaseStorage):
         '''
         BaseStorage.__init__(self, context)
         self.database, self.storage = self.__conn__()
-        self.ensure_index()
         super(Storage, self).__init__(context)
 
     def __conn__(self):
@@ -31,16 +30,19 @@ class Storage(BaseStorage):
         :returns: MongoDB DB and Collection
         :rtype: pymongo.database.Database, pymongo.database.Collection
         '''
-        if self.context.config.MONGO_STORAGE_URI:
-            connection = MongoClient(self.context.config.MONGO_STORAGE_URI)
-        else:
-            connection = MongoClient(
-                self.context.config.MONGO_STORAGE_SERVER_HOST,
-                self.context.config.MONGO_STORAGE_SERVER_PORT
-            )
 
-        database = connection[self.context.config.MONGO_STORAGE_SERVER_DB]
-        storage = database[self.context.config.MONGO_STORAGE_SERVER_COLLECTION]
+        mongo_conn = MongoConnector(
+            uri=self.context.config.MONGO_STORAGE_URI,
+            host=self.context.config.MONGO_STORAGE_SERVER_HOST,
+            port=self.context.config.MONGO_STORAGE_SERVER_PORT,
+            db_name=self.context.config.MONGO_STORAGE_SERVER_DB,
+            coll_name=
+            self.context.config.MONGO_STORAGE_SERVER_COLLECTION,
+            result=False
+        )
+
+        database = mongo_conn.db_conn
+        storage = mongo_conn.coll_conn
 
         return database, storage
 
@@ -53,23 +55,12 @@ class Storage(BaseStorage):
         '''
 
         if self.context.config.MONGODB_STORAGE_IGNORE_ERRORS:
-            logger.error("[MONGODB_STORAGE] %s" % exc_value)
+            logger.error("[MONGODB_STORAGE] %s,%s" % exc_type, exc_value)
             if fname == '_exists':
                 return False
             return None
         else:
             raise exc_value
-
-    @OnException(on_mongodb_error, PyMongoError)
-    def ensure_index(self):
-        index_name = 'path_1_created_at_-1'
-        if index_name not in self.storage.index_information():
-            self.storage.create_index(
-                [('path', ASCENDING), ('created_at', DESCENDING)],
-                name=index_name
-            )
-        else:
-            logger.info("[MONGODB_STORAGE] Index Already Exists")
 
     def get_max_age(self):
         '''Return the TTL of the current request.
@@ -94,8 +85,8 @@ class Storage(BaseStorage):
                         if no SECURITY_KEY specified")
             doc_with_crypto['crypto'] = self.context.server.security_key
 
-        fs = gridfs.GridFS(self.database)
-        file_data = fs.put(bytes, **doc)
+        file_storage = gridfs.GridFS(self.database)
+        file_data = file_storage.put(bytes, **doc)
 
         doc_with_crypto['file_id'] = file_data
         self.storage.insert_one(doc_with_crypto)
@@ -160,9 +151,9 @@ class Storage(BaseStorage):
         if not stored:
             return None
 
-        fs = gridfs.GridFS(self.database)
+        file_storage = gridfs.GridFS(self.database)
 
-        contents = fs.get(stored['file_id']).read()
+        contents = file_storage.get(stored['file_id']).read()
         return contents
 
     @return_future
@@ -183,8 +174,8 @@ class Storage(BaseStorage):
     def remove(self, path):
         self.storage.delete_many({'path': path})
 
-        fs = gridfs.GridFS(self.database)
-        file_datas = fs.find({'path': path})
+        file_storage = gridfs.GridFS(self.database)
+        file_datas = file_storage.find({'path': path})
         if file_datas:
             for file_data in file_datas:
-                fs.delete(file_data._id)
+                file_storage.delete(file_data._id)

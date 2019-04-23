@@ -8,13 +8,13 @@ from datetime import datetime, timedelta
 import pytz
 
 import gridfs
-from pymongo import ASCENDING, DESCENDING, MongoClient
 from pymongo.errors import PyMongoError
 from tornado.concurrent import return_future
 from thumbor.engines import BaseEngine
 from thumbor.result_storages import BaseStorage, ResultStorageResult
 from thumbor.utils import logger
 from tc_mongodb.utils import OnException
+from tc_mongodb.mongodb.connector import MongoConnector
 
 
 class Storage(BaseStorage):
@@ -27,7 +27,6 @@ class Storage(BaseStorage):
     def __init__(self, context):
         BaseStorage.__init__(self, context)
         self.database, self.storage = self.__conn__()
-        self.ensure_index()
 
         if not Storage.start_time:
             Storage.start_time = time.time()
@@ -39,22 +38,18 @@ class Storage(BaseStorage):
         :rtype: pymongo.database.Database, pymongo.database.Collection
         '''
 
-        if self.context.config.MONGO_RESULT_STORAGE_URI:
-            connection = MongoClient(
-                self.context.config.MONGO_RESULT_STORAGE_URI
-            )
-        else:
-            connection = MongoClient(
-                self.context.config.MONGO_RESULT_STORAGE_SERVER_HOST,
-                self.context.config.MONGO_RESULT_STORAGE_SERVER_PORT
-            )
+        mongo_conn = MongoConnector(
+            uri=self.context.config.MONGO_RESULT_STORAGE_URI,
+            host=self.context.config.MONGO_RESULT_STORAGE_SERVER_HOST,
+            port=self.context.config.MONGO_RESULT_STORAGE_SERVER_PORT,
+            db_name=self.context.config.MONGO_RESULT_STORAGE_SERVER_DB,
+            coll_name=
+            self.context.config.MONGO_RESULT_STORAGE_SERVER_COLLECTION,
+            result=True
+        )
 
-        database = connection[
-            self.context.config.MONGO_RESULT_STORAGE_SERVER_DB
-        ]
-        storage = database[
-            self.context.config.MONGO_RESULT_STORAGE_SERVER_COLLECTION
-        ]
+        database = mongo_conn.db_conn
+        storage = mongo_conn.coll_conn
 
         return database, storage
 
@@ -66,21 +61,10 @@ class Storage(BaseStorage):
         :returns: Default value or raise the current exception
         '''
 
-        logger.error("[MONGODB_RESULT_STORAGE] %s" % exc_value)
+        logger.error("[MONGODB_RESULT_STORAGE] %s,%s" % exc_type, exc_value)
         if fname == '_exists':
             return False
         return None
-
-    @OnException(on_mongodb_error, PyMongoError)
-    def ensure_index(self):
-        index_name = 'key_1_created_at_-1'
-        if index_name not in self.storage.index_information():
-            self.storage.create_index(
-                [('key', ASCENDING), ('created_at', DESCENDING)],
-                name=index_name
-            )
-        else:
-            logger.info("[MONGODB_RESULT_STORAGE] Index Already Exists")
 
     def is_auto_webp(self):
         '''
@@ -169,8 +153,8 @@ class Storage(BaseStorage):
 
         file_doc = dict(doc)
 
-        fs = gridfs.GridFS(self.database)
-        file_data = fs.put(bytes, **doc)
+        file_storage = gridfs.GridFS(self.database)
+        file_data = file_storage.put(bytes, **doc)
 
         file_doc['file_id'] = file_data
         self.storage.insert_one(file_doc)
@@ -200,9 +184,9 @@ class Storage(BaseStorage):
         if not stored:
             return None
 
-        fs = gridfs.GridFS(self.database)
+        file_storage = gridfs.GridFS(self.database)
 
-        contents = fs.get(stored['file_id']).read()
+        contents = file_storage.get(stored['file_id']).read()
 
         metadata = stored['metadata']
         metadata['LastModified'] = stored['created_at'].replace(
