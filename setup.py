@@ -22,6 +22,7 @@ setup(
     url="https://github.com/thumbor-community/mongodb",
     packages=find_packages(include=[
         'tc_mongodb',
+        'tc_mongodb.mongodb',
         'tc_mongodb.storages',
         'tc_mongodb.result_storages'
     ]),
