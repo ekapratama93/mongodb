@@ -33,7 +33,7 @@ setup(
         'Programming Language :: Python :: 2.7',
     ],
     install_requires=[
-        'thumbor>=6.5.1',
+        'thumbor>=6.5.1,<7.0.0',
         'pymongo==3.10.1'
     ]
 )
