@@ -34,6 +34,6 @@ setup(
     ],
     install_requires=[
         'thumbor>=6.5.1',
-        'pymongo'
+        'pymongo==3.10.1'
     ]
 )
